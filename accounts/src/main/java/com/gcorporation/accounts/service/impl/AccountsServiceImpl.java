@@ -1,10 +1,13 @@
 package com.gcorporation.accounts.service.impl;
 
 import com.gcorporation.accounts.constants.AccountsConstants;
+import com.gcorporation.accounts.dto.AccountsDto;
 import com.gcorporation.accounts.dto.CustomerDto;
 import com.gcorporation.accounts.entity.Accounts;
 import com.gcorporation.accounts.entity.Customer;
 import com.gcorporation.accounts.exception.CustomerAlreadyExistsException;
+import com.gcorporation.accounts.exception.ResourceNotFoundException;
+import com.gcorporation.accounts.mapper.AccountsMapper;
 import com.gcorporation.accounts.mapper.CustomerMapper;
 import com.gcorporation.accounts.repository.AccountsRepository;
 import com.gcorporation.accounts.repository.CustomerRepository;
@@ -35,11 +38,8 @@ public class AccountsServiceImpl implements IAccountsService {
                     + customerDto.getMobileNumber());
         }
         customer.setCreatedAt(LocalDateTime.now());
-        System.out.println("get customerID: -------->" + customer.getCreatedAt());
         customer.setCreatedBy("Anonymous");
-        System.out.println("get createdBy: ------>" + customer.getCreatedBy());
         // Log customer details before saving
-        System.out.println("Creating customer: ------>" + customer);
         Customer savedCustomer = customerRepository.save(customer);
         accountsRepository.save(createNewAccount(savedCustomer));
     }
@@ -60,5 +60,24 @@ public class AccountsServiceImpl implements IAccountsService {
         newAccount.setBranchAddress(AccountsConstants.ADDRESS);
 
         return newAccount;
+    }
+
+    /**
+     * @param mobileNumber - Input Mobile Number
+     * @return Accounts Details based on a given mobileNumber
+     */
+    @Override
+    public CustomerDto fetchAccount(String mobileNumber) {
+        Customer customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
+                () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
+        );
+        System.out.println("customer" + customer);
+        Accounts accounts = accountsRepository.findByCustomerId(customer.getCustomerId()).orElseThrow(
+                () -> new ResourceNotFoundException("Account", "customerId", customer.getCustomerId().toString())
+        );
+        System.out.println("accounts" + accounts);
+        CustomerDto customerDto = CustomerMapper.mapToCustomerDto(customer, new CustomerDto());
+        customerDto.setAccountsDto(AccountsMapper.mapToAccountsDto(accounts, new AccountsDto()));
+        return customerDto;
     }
 }
